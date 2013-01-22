@@ -1,4 +1,5 @@
 import sys
+import collections
 
 class Brainfuck:
 
@@ -6,7 +7,6 @@ class Brainfuck:
 		self.cells = [0 for i in range(9999)]
 		self.pointer = 0
 		self.sp = 0
-		self.loop = []
 		self.has_error = False
 
 	def load(self, filename):
@@ -15,16 +15,40 @@ class Brainfuck:
 		except IOError:
 			print "Error loading source"
 
-		self.interpret()
 
-	def interpret(self):
 		self.source = self.source.read()
+		self.tokens = self.tokenize()
+
+		self.interpret(self.tokens)
+
+	def tokenize(self):
+		tokens = []
 
 		while self.sp < len(self.source):
+			c = self.source[self.sp]
+
+			if c in [',', '.', '>', '<', '+', '-']:
+				tokens.append(c)
+			elif c == '[':
+				self.sp += 1
+				sub_token = self.tokenize()
+				tokens.append(sub_token)
+			elif c == ']':
+				break
+
+			self.sp += 1
+
+		return tokens
+
+
+	def interpret(self, tokens):
+		sp = 0
+
+		while sp < len(tokens):
 			if self.has_error:
 				return
 
-			c = self.source[self.sp]
+			c = tokens[sp]
 
 			if   c == ',':
 				self.input()
@@ -38,20 +62,20 @@ class Brainfuck:
 				self.increase_cell()
 			elif c == '-':
 				self.decrease_cell()
-			elif c == '[':
-				self.start_loop()
-			elif c == ']':
-				self.resume_loop()
+			elif isinstance(c, collections.Iterable):
+				while self.current_cell_not_zero(): self.interpret(c)
 				
-			self.sp += 1
+			sp += 1
 
 
+	def current_cell_not_zero(self):
+		return self.cells[self.pointer] != 0
 
 	def input(self):
 		self.cells[self.pointer] = ord(raw_input()[0])
 
 	def output(self):
-		print(chr(self.cells[self.pointer]))
+		sys.stdout.write(chr(self.cells[self.pointer]))
 
 	def next_cell(self):
 		if self.pointer == len(self.cells): 
@@ -73,12 +97,6 @@ class Brainfuck:
 
 	def decrease_cell(self):
 		self.cells[self.pointer] -= 1
-
-	def start_loop(self):
-		print("start_loop")
-
-	def resume_loop(self):
-		print("resume_loop")
 
 
 	def error(self, message):
