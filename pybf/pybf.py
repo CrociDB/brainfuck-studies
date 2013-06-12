@@ -4,17 +4,19 @@ import collections
 class Brainfuck:
 
     def __init__(self):
-        self.cells = [0 for i in range(9999)]
+        self.cells = [0] * 9999
         self.pointer = 0
-        self.sp = 0
+        self.stack_pointer = 0
         self.has_error = False
+        
+        self.source = None
+        self.tokens = []
 
     def load(self, filename):
         try:
             self.source = open(filename, "r")
         except IOError:
             print "Error loading source"
-
 
         self.source = self.source.read()
         self.tokens = self.tokenize()
@@ -24,48 +26,49 @@ class Brainfuck:
     def tokenize(self):
         tokens = []
 
-        while self.sp < len(self.source):
-            c = self.source[self.sp]
+        while self.stack_pointer < len(self.source):
+            char = self.source[self.stack_pointer]
 
-            if c in [',', '.', '>', '<', '+', '-']:
-                tokens.append(c)
-            elif c == '[':
-                self.sp += 1
+            if char in [',', '.', '>', '<', '+', '-']:
+                tokens.append(char)
+            elif char == '[':
+                self.stack_pointer += 1
                 sub_token = self.tokenize()
                 tokens.append(sub_token)
-            elif c == ']':
+            elif char == ']':
                 break
 
-            self.sp += 1
+            self.stack_pointer += 1
 
         return tokens
 
 
     def interpret(self, tokens):
-        sp = 0
+        stack_pointer = 0
 
-        while sp < len(tokens):
+        while stack_pointer < len(tokens):
             if self.has_error:
                 return
 
-            c = tokens[sp]
+            char = tokens[stack_pointer]
 
-            if   c == ',':
+            if   char == ',':
                 self.input()
-            elif c == '.':
+            elif char == '.':
                 self.output()
-            elif c == '>':
+            elif char == '>':
                 self.next_cell()
-            elif c == '<':
+            elif char == '<':
                 self.previous_cell()
-            elif c == '+':
+            elif char == '+':
                 self.increase_cell()
-            elif c == '-':
+            elif char == '-':
                 self.decrease_cell()
-            elif isinstance(c, collections.Iterable):
-                while self.current_cell_not_zero(): self.interpret(c)
+            elif isinstance(char, collections.Iterable):
+                while self.current_cell_not_zero(): 
+                    self.interpret(char)
                 
-            sp += 1
+            stack_pointer += 1
 
 
     def current_cell_not_zero(self):
@@ -80,7 +83,7 @@ class Brainfuck:
     def next_cell(self):
         if self.pointer == len(self.cells): 
             self.error("No more cells ahead")
-            return;
+            return
 
         self.pointer += 1
 
@@ -88,7 +91,7 @@ class Brainfuck:
     def previous_cell(self):
         if self.pointer == 0: 
             self.error("This is the first cell already")
-            return;
+            return
 
         self.pointer -= 1
 
@@ -106,7 +109,9 @@ class Brainfuck:
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        print("\npybf.py -- no file specified. how to use: \n\t$ python pybf.py sourcefile\n")
+        print("""
+            \npybf.py -- no file specified. how to use: 
+            \n\t$ python pybf.py sourcefile\n""")
     else:
         bf = Brainfuck()
         bf.load(sys.argv[1])
